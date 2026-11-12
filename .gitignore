@@ -1,0 +1,16 @@
+# Python virtual environment
+.venv/
+
+# Local learning notes (VibeWise)
+.vibe-wise/
+
+# Python / Jupyter generated files
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Streamlit local secrets
+.streamlit/secrets.toml
+
+# macOS
+.DS_Store
