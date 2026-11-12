@@ -1,7 +1,8 @@
-"""Regex fingerprint features, shared by the notebook and the Streamlit app.
+"""Regex fingerprint features and text cleaning, shared by the notebook and the Streamlit app.
 
-Always run on the RAW message: cleaning deletes the very fingerprints these detect.
+regex_features() always runs on the RAW message: cleaning deletes the very fingerprints it detects.
 """
+import html
 import re
 
 # One count column per pattern (spec section 4, regex feature catalogue).
@@ -29,3 +30,43 @@ def regex_features(text: str) -> dict:
     feats["n_words"] = len(text.split())
     feats["digit_ratio"] = sum(ch.isdigit() for ch in text) / max(len(text), 1)
     return feats
+
+
+# --- Text cleaning (FR-3) and slang normalization (FR-4) ---
+# Order matters: each rule only sees what the earlier rules left behind.
+
+# Specific placeholders first, so "£2" becomes "money" before "2" is touched.
+PLACEHOLDERS = [
+    ("url", PATTERNS["n_urls"]),
+    ("money", PATTERNS["n_money"]),
+    ("phone", PATTERNS["n_phones"]),
+]
+
+# SMS slang map, applied while digits still exist ("2", "fr33").
+SLANG = [
+    (re.compile(r"\bu\b"), "you"),
+    (re.compile(r"\bur\b"), "your"),
+    (re.compile(r"\btxt\b"), "text"),
+    (re.compile(r"\b2\b"), "to"),
+    (re.compile(r"fr[e3]{2}"), "free"),
+]
+
+NUMBER = re.compile(r"\d+")
+NON_LETTER = re.compile(r"[^a-z\s]")
+REPEATED = re.compile(r"(\w)\1{2,}")
+SPACES = re.compile(r"\s+")
+
+
+def clean_text(text: str, slang: bool = True) -> str:
+    """Turn a raw SMS into lowercase words and placeholder tokens for bag-of-words."""
+    text = html.unescape(text.replace("å£", "£"))  # 1. fix encoding and HTML entities
+    text = text.lower()  # CAPS were already counted by regex_features
+    for token, pattern in PLACEHOLDERS:  # 2. url / money / phone placeholders
+        text = pattern.sub(f" {token} ", text)
+    if slang:  # 3. slang map (switchable for the ablation)
+        for pattern, replacement in SLANG:
+            text = pattern.sub(replacement, text)
+    text = NUMBER.sub(" num ", text)  # 4. remaining numbers
+    text = NON_LETTER.sub(" ", text)  # 5. punctuation, symbols and other non-ASCII
+    text = REPEATED.sub(r"\1\1", text)  # 6. "sooo" -> "soo"
+    return SPACES.sub(" ", text).strip()  #    collapse whitespace

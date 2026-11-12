@@ -112,7 +112,7 @@ We use the UCI SMS Spam Collection: about 5,570 English SMS, roughly 13% spam, a
 
 **Known noise to handle**
 
-- Encoding artefacts such as `Â£` instead of `£`
+- Encoding artefacts such as `å£` instead of `£` (when read as `latin-1`)
 - HTML entities such as `&lt;` and `&amp;`
 - SMS slang (`u`, `ur`, `txt`, `2morrow`) and repeated letters (`sooo`)
 - About 400 duplicate messages
@@ -135,7 +135,7 @@ Model 0 uses only the regex branch, Models 1–2 only the processed-text branch,
 
 1. Load, deduplicate, split train/test
 2. Extract regex features from raw `text`; Model 0 rules run on these
-3. Clean `text` into `clean_text` with regex, then apply the slang map
+3. Clean `text` into `clean_text` with regex, including the slang map (applied before numbers are removed)
 4. Tokenize, remove stopwords (keep negations), POS-tag, lemmatize with POS
 5. Compute POS ratio features from the tags
 6. Vectorize with TF-IDF, unigrams + bigrams (fitted on train only)
@@ -159,13 +159,14 @@ FEATURES = {
 
 **Cleaning rules, in order**
 
-1. Fix encoding: `Â£` → `£`; `html.unescape()` for `&lt;` and similar; strip leftover non-ASCII symbols
-2. Replace URLs with `URL`, money with `MONEY`, phone numbers with `PHONE`, other numbers with `NUM`
-3. Lowercase (regex CAPS feature is already counted)
-4. Remove punctuation: `re.sub(r"[^a-z\s]", " ", text)`
-5. Collapse letters repeated 3+ times: `re.sub(r"(\w)\1{2,}", r"\1\1", text)`
-6. Slang map with word-boundary regex: `\bu\b` → you, `\bur\b` → your, `\btxt\b` → text, `\b2\b` → to, `fr[e3]{2}` → free
-7. Collapse whitespace
+Order matters: each rule only sees what earlier rules left behind (revised 12 Nov after testing; the first order deleted `£` and ran the slang map after digits were gone).
+
+1. Fix encoding: `å£` → `£`; `html.unescape()` for `&lt;` and similar; then lowercase (regex CAPS feature is already counted)
+2. Replace URLs with `url`, money with `money`, phone numbers with `phone` (specific patterns before the general number rule)
+3. Slang map with word-boundary regex, while digits still exist: `\bu\b` → you, `\bur\b` → your, `\btxt\b` → text, `\b2\b` → to, `fr[e3]{2}` → free
+4. Replace remaining numbers with `num`
+5. Remove punctuation and other non-ASCII: `re.sub(r"[^a-z\s]", " ", text)`
+6. Collapse letters repeated 3+ times: `re.sub(r"(\w)\1{2,}", r"\1\1", text)`, then collapse whitespace
 
 **Models**
 
