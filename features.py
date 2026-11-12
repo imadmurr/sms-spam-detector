@@ -5,6 +5,10 @@ regex_features() always runs on the RAW message: cleaning deletes the very finge
 import html
 import re
 
+from nltk import pos_tag, word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+
 # One count column per pattern (spec section 4, regex feature catalogue).
 FEATURES = {
     "n_urls": r"https?://\S+|www\.\S+|\b\w+\.(?:com|net|org|co\.uk)\b",
@@ -70,3 +74,42 @@ def clean_text(text: str, slang: bool = True) -> str:
     text = NON_LETTER.sub(" ", text)  # 5. punctuation, symbols and other non-ASCII
     text = REPEATED.sub(r"\1\1", text)  # 6. "sooo" -> "soo"
     return SPACES.sub(" ", text).strip()  #    collapse whitespace
+
+
+# --- Tokens, stopwords, lemmas (FR-5 to FR-7) ---
+
+NEGATIONS = {"not", "no", "nor", "never"}
+STOPWORDS = set(stopwords.words("english")) - NEGATIONS  # keep negations: "not free" != "free"
+LEMMATIZER = WordNetLemmatizer()
+
+
+def wordnet_pos(tag: str) -> str:
+    """Map a Penn Treebank tag (VBD, NNS, ...) to one of WordNet's four word types."""
+    return {"J": "a", "V": "v", "R": "r"}.get(tag[0], "n")
+
+
+def process_tokens(clean: str, remove_stopwords: bool = True, lemmatize: bool = True) -> list:
+    """Tokenize cleaned text, POS-tag it (before stopwords, so the tagger sees context),
+    drop stopwords and lemmatize with POS. The switches serve the ablation runs."""
+    tagged = pos_tag(word_tokenize(clean))
+    if remove_stopwords:
+        tagged = [(word, tag) for word, tag in tagged if word not in STOPWORDS]
+    if lemmatize:
+        return [LEMMATIZER.lemmatize(word, wordnet_pos(tag)) for word, tag in tagged]
+    return [word for word, _ in tagged]
+
+
+# --- POS ratio features (FR-8), computed on RAW text: the tagger needs capitals and digits ---
+
+POS_FEATURES = ["pos_vb", "pos_cd", "pos_nnp"]
+
+
+def pos_features(text: str) -> dict:
+    """Share of tokens that are verbs (VB*), numbers (CD) and proper nouns (NNP*)."""
+    tags = [tag for _, tag in pos_tag(word_tokenize(text))]
+    n = max(len(tags), 1)
+    return {
+        "pos_vb": sum(t.startswith("VB") for t in tags) / n,
+        "pos_cd": sum(t == "CD" for t in tags) / n,
+        "pos_nnp": sum(t.startswith("NNP") for t in tags) / n,
+    }
