@@ -5,6 +5,7 @@ regex_features() always runs on the RAW message: cleaning deletes the very finge
 import html
 import re
 
+import pandas as pd
 from nltk import pos_tag, word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -113,3 +114,14 @@ def pos_features(text: str) -> dict:
         "pos_cd": sum(t == "CD" for t in tags) / n,
         "pos_nnp": sum(t.startswith("NNP") for t in tags) / n,
     }
+
+
+# --- Model input (used by the notebook check and the Streamlit app) ---
+
+
+def build_input(text: str) -> pd.DataFrame:
+    """One-row table with exactly the columns Model 3 was trained on:
+    regex + POS features from the RAW text, `doc` from the cleaned and processed text."""
+    row = {**regex_features(text), **pos_features(text)}
+    row["doc"] = " ".join(process_tokens(clean_text(text)))
+    return pd.DataFrame([row])

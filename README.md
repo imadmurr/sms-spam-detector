@@ -15,7 +15,11 @@ pip install -r requirements.txt
 ## Run
 
 - Notebook: open `sms_spam_detector.ipynb` and run all cells top to bottom.
-- Demo app: `streamlit run app.py`
+- Demo app: `streamlit run app.py` (loads `models/model3.joblib`, saved by the notebook; downloads NLTK data on first start)
+
+## Deploy (Streamlit Community Cloud)
+
+On share.streamlit.io: New app → this repository, branch `main`, main file `app.py`; under Advanced settings choose Python 3.11.
 
 ## Layout
 
@@ -24,6 +28,7 @@ data/spam.csv              # UCI SMS Spam Collection (Kaggle mirror)
 docs/                      # project specs
 sms_spam_detector.ipynb    # full pipeline, training and evaluation
 app.py                     # Streamlit demo
+features.py                # regex features, cleaning, tokens, POS, model input (shared)
 models/                    # saved model + vectorizer (joblib)
 figures/                   # exported charts for slides and report
 requirements.txt           # pinned dependencies
