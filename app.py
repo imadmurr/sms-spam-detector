@@ -139,7 +139,7 @@ st.session_state.setdefault("analysed", "")
 # Test-set results from the notebook (section 12).
 st.markdown(
     '<div class="topbar"><div class="brand"><div class="logo">🛡️</div><div>'
-    '<div class="brand-name">SpamShield</div><div class="brand-tag">SMS spam &amp; phishing detector · NLP capstone</div>'
+    '<div class="brand-name">SMS Spam Detector</div><div class="brand-tag">Spam &amp; phishing detection · NLP capstone</div>'
     '</div></div><div class="stats"><div class="stat">F1 <b>0.952</b></div><div class="stat">Precision <b>98.3%</b></div>'
     '<div class="stat">Recall <b>92.2%</b></div><div class="stat">5,158 training SMS</div></div></div>'
     '<div class="hero"><h1>Is this text message <span class="accent">a scam?</span></h1>'
