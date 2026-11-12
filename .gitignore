@@ -1,19 +1,23 @@
-# Python virtual environment
+# Virtual environments
 .venv/
+venv/
+env/
 
-# Local learning notes (VibeWise)
-.vibe-wise/
-
-# Python / Jupyter generated files
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Jupyter
 .ipynb_checkpoints/
 
-# Streamlit local secrets
+# Secrets and local config
+.env
 .streamlit/secrets.toml
 
-# macOS
+# Editors and OS
+.vscode/
+.idea/
 .DS_Store
-
-# Local Claude Code launch config
-.claude/
+Thumbs.db
