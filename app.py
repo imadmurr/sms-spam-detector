@@ -18,16 +18,18 @@ from features import FINGERPRINTS, PATTERNS, build_input, clean_text, process_to
 MODEL_PATH = "models/model3.joblib"
 RULE_K = 3  # Model 0: spam if at least 3 distinct fingerprints fire (k tuned in the notebook)
 
-# Fingerprint -> (label, highlight colour)
+# Fingerprint -> (label, soft highlight colour)
 FINGERPRINT_STYLE = {
-    "n_urls": ("Link", "#3B82F6"),
-    "n_phones": ("Phone number", "#EF4444"),
-    "n_shortcodes": ("Short code", "#F97316"),
-    "n_money": ("Money", "#22C55E"),
-    "n_caps": ("CAPS", "#A855F7"),
-    "n_urgent": ("Urgency word", "#EAB308"),
-    "n_exclaim": ("Exclamation", "#EC4899"),
+    "n_urls": ("Link", "#DBEAFE"),
+    "n_phones": ("Phone", "#FEE2E2"),
+    "n_shortcodes": ("Short code", "#FFEDD5"),
+    "n_money": ("Money", "#DCFCE7"),
+    "n_caps": ("CAPS", "#EDE9FE"),
+    "n_urgent": ("Urgency", "#FEF3C7"),
+    "n_exclaim": ("!", "#FCE7F3"),
 }
+OTHER_LABELS = {"n_chars": "Length", "n_words": "Word count", "digit_ratio": "Digit share",
+                "pos_vb": "Verb share", "pos_cd": "Number share", "pos_nnp": "Proper-noun share"}
 
 EXAMPLES = {
     "Scams": {
@@ -50,18 +52,29 @@ EXAMPLES = {
 
 CSS = """
 <style>
-.block-container {max-width: 1100px; padding-top: 2rem;}
-.hero h1 {font-size: 2.4rem; margin-bottom: 0; background: linear-gradient(90deg, #7C5CFF, #22D3EE);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
-.hero p {color: #9AA0B4; margin-top: .25rem;}
-.card {background: #1A1D29; border: 1px solid #2A2F42; border-radius: 14px; padding: 1.1rem 1.3rem; margin-bottom: 1rem;}
-.verdict {font-size: 2rem; font-weight: 700;}
-.muted {color: #9AA0B4; font-size: .85rem;}
-.msg {line-height: 2; font-size: 1.05rem;}
-.msg mark {color: #0E1117; border-radius: 6px; padding: 2px 5px; font-weight: 600;}
-.chip {display: inline-block; border-radius: 999px; padding: 3px 10px; margin: 3px; font-size: .8rem;
-       border: 1px solid #2A2F42; color: #6B7186;}
-.chip.on {color: #0E1117; font-weight: 600; border-color: transparent;}
+.block-container {max-width: 1180px; padding-top: 3.2rem; padding-bottom: 1rem;}
+h1 {font-size: 1.7rem !important; font-weight: 700; letter-spacing: -0.02em; padding: 0 !important;}
+.sub {color: #6B7280; font-size: .9rem; margin: -.4rem 0 1.2rem;}
+.card {border: 1px solid #E5E7EB; border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: .8rem;}
+.label {color: #6B7280; font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .35rem;}
+.verdict {font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2;}
+.bar {height: 6px; background: #F3F4F6; border-radius: 99px; margin: .6rem 0 .7rem;}
+.bar > div {height: 100%; border-radius: 99px;}
+.models {font-size: .9rem; color: #374151;}
+.models b {font-weight: 600;}
+.msg {line-height: 1.9; font-size: .98rem; color: #111827;}
+.msg mark {color: #111827; border-radius: 4px; padding: 1px 4px;}
+.chip {display: inline-block; border-radius: 99px; padding: 1px 9px; margin: 0 4px 6px 0; font-size: .75rem;
+       color: #9CA3AF; border: 1px solid #E5E7EB;}
+.chip.on {color: #111827; border-color: transparent;}
+.contrib {display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.4rem;}
+.row {display: grid; grid-template-columns: 1fr 70px; align-items: center; gap: 8px; font-size: .82rem;
+      color: #374151; padding: 2px 0;}
+.row span {overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+.mini {height: 4px; background: #F3F4F6; border-radius: 99px;}
+.mini > div {height: 100%; border-radius: 99px;}
+[data-testid="stButtonGroup"] > div {flex-wrap: wrap;}  /* example pills wrap on narrow screens */
+@media (max-width: 640px) {.contrib {grid-template-columns: 1fr;}}
 </style>
 """
 
@@ -80,20 +93,15 @@ def highlight(text: str) -> str:
     for start, end, name in spans:
         if start < pos:  # overlaps an earlier match (e.g. "WON" is CAPS and urgency): keep the first
             continue
-        colour = FINGERPRINT_STYLE[name][1]
         out.append(html.escape(text[pos:start]))
-        out.append(f'<mark style="background:{colour}">{html.escape(text[start:end])}</mark>')
+        out.append(f'<mark style="background:{FINGERPRINT_STYLE[name][1]}">{html.escape(text[start:end])}</mark>')
         pos = end
     out.append(html.escape(text[pos:]))
     return "".join(out)
 
 
-OTHER_LABELS = {"n_chars": "Length", "n_words": "Word count", "digit_ratio": "Digit share",
-                "pos_vb": "Verb share", "pos_cd": "Number share", "pos_nnp": "Proper-noun share"}
-
-
 def readable(name: str, X) -> str:
-    """'text__claim' -> '"claim"'; 'numeric__n_phones' -> 'Phone number = 0' (value in this message)."""
+    """'text__claim' -> '"claim"'; 'numeric__n_phones' -> 'Phone = 0' (value in this message)."""
     kind, feature = name.split("__", 1)
     if kind == "text":
         return f'"{feature}"'
@@ -109,92 +117,84 @@ def top_contributions(model, X, n=5):
     values = features.transform(X).toarray()[0] * clf.coef_[0]
     names = [readable(name, X) for name in features.get_feature_names_out()]
     ranked = sorted((v, name) for v, name in zip(values, names) if v != 0)
-    return ranked[::-1][:n], ranked[:n]  # (toward spam, toward ham)
+    return [r for r in ranked[::-1][:n] if r[0] > 0], [r for r in ranked[:n] if r[0] < 0]
 
 
-def set_message(text: str):
-    st.session_state.message = text
+def contrib_rows(items, colour) -> str:
+    """Compact HTML rows: name + thin bar scaled to the contribution (full bar at 5)."""
+    return "".join(
+        f'<div class="row"><span>{html.escape(name)}</span>'
+        f'<div class="mini"><div style="width:{min(abs(v) / 5, 1) * 100:.0f}%;background:{colour}"></div></div></div>'
+        for v, name in items) or '<div class="row"><span>—</span></div>'
+
+
+def pick_example(group: str):
+    """Pill callback: load the chosen example and clear the other groups' selection."""
+    choice = st.session_state[f"pick_{group}"]
+    if choice:
+        st.session_state.message = EXAMPLES[group][choice]
+        for other in EXAMPLES:
+            if other != group:
+                st.session_state[f"pick_{other}"] = None
 
 
 # ---------------------------------------------------------------- page
 st.set_page_config(page_title="SMS Spam Detector", page_icon="🛡️", layout="wide")
 st.markdown(CSS, unsafe_allow_html=True)
-st.markdown('<div class="hero"><h1>🛡️ SMS Spam & Phishing Detector</h1>'
-            "<p>Regex fingerprints + NLP features + TF-IDF words → Logistic Regression · "
-            "trained on 5,158 UCI SMS messages</p></div>", unsafe_allow_html=True)
-
+st.title("🛡️ SMS Spam & Phishing Detector")
 # Test-set results from the notebook (section 12).
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Spam F1 (test)", "0.952")
-m2.metric("Precision (test)", "98.3%")
-m3.metric("Recall (test)", "92.2%")
-m4.metric("Regex rules alone, F1", "0.848")
+st.markdown('<div class="sub">Regex fingerprints + NLP features + TF-IDF → Logistic Regression · '
+            "test F1 0.952 · precision 98.3% · regex rules alone F1 0.848</div>", unsafe_allow_html=True)
 
-left, right = st.columns([1, 1], gap="large")
+left, right = st.columns([5, 6], gap="large")
 
 with left:
-    st.subheader("Message")
     for group, examples in EXAMPLES.items():
-        st.caption(group.upper())
-        cols = st.columns(2)
-        for i, (label, text) in enumerate(examples.items()):
-            cols[i % 2].button(label, on_click=set_message, args=(text,), width="stretch")
-    message = st.text_area("SMS message", key="message", height=140, label_visibility="collapsed",
+        st.pills(group, list(examples), key=f"pick_{group}", on_change=pick_example, args=(group,))
+    message = st.text_area("Message", key="message", height=130,
                            placeholder="Paste or type an SMS, then press Ctrl/⌘ + Enter…")
+    if message.strip():
+        with st.expander("How the message was processed"):
+            cleaned = clean_text(message)
+            for title, value in [("Raw: regex + POS features", message),
+                                 ("Cleaned: encoding, placeholders, slang, lowercase", cleaned),
+                                 ("Tokens: stopwords removed, lemmatized", " ".join(process_tokens(cleaned)))]:
+                st.caption(title)
+                st.code(value, language=None, wrap_lines=True)
 
 with right:
-    st.subheader("Analysis")
     if not message.strip():
-        st.info("Pick an example or type a message to analyse it.")
+        st.markdown('<div class="card"><div class="label">Result</div>'
+                    '<div class="models">Pick an example or type a message.</div></div>', unsafe_allow_html=True)
     else:
         model = load_model()
         X = build_input(message)
         p_spam = float(model.predict_proba(X)[0, 1])
         fired = [name for name in FINGERPRINTS if PATTERNS[name].search(message)]
+        is_spam, rule_spam = p_spam >= 0.5, len(fired) >= RULE_K
+        colour = "#DC2626" if is_spam else "#16A34A"
+        risk = "high" if p_spam >= 0.7 else "medium" if p_spam >= 0.3 else "low"
+        note = (" · <i>they disagree: the words carry signal the fingerprints miss</i>"
+                if is_spam != rule_spam else "")
 
-        is_spam = p_spam >= 0.5
-        risk = "High" if p_spam >= 0.7 else "Medium" if p_spam >= 0.3 else "Low"
-        colour = "#EF4444" if is_spam else "#22C55E"
-        st.markdown(f'<div class="card"><div class="muted">ML model verdict · risk {risk}</div>'
-                    f'<div class="verdict" style="color:{colour}">{"🚨 SPAM" if is_spam else "✅ HAM"} · {p_spam:.0%}</div>'
-                    f'<div class="muted">probability that this message is spam</div></div>',
-                    unsafe_allow_html=True)
-        st.progress(p_spam)
+        st.markdown(
+            f'<div class="card"><div class="label">Result · {risk} risk</div>'
+            f'<div class="verdict" style="color:{colour}">{"Spam" if is_spam else "Not spam"} · {p_spam:.0%}</div>'
+            f'<div class="bar"><div style="width:{p_spam * 100:.0f}%;background:{colour}"></div></div>'
+            f'<div class="models">Regex rule: <b>{"Spam" if rule_spam else "Ham"}</b> ({len(fired)}/7) · '
+            f'ML model: <b>{"Spam" if is_spam else "Ham"}</b> ({p_spam:.0%}){note}</div></div>',
+            unsafe_allow_html=True)
 
-        rule_spam = len(fired) >= RULE_K
-        c1, c2 = st.columns(2)
-        c1.metric("Regex rule (Model 0)", "Spam" if rule_spam else "Ham", f"{len(fired)}/7 fingerprints",
-                  delta_color="off", delta_arrow="off")
-        c2.metric("ML model (Model 3)", "Spam" if is_spam else "Ham", f"{p_spam:.0%} spam", delta_color="off",
-                  delta_arrow="off")
-        if rule_spam != is_spam:
-            st.caption("The two disagree: the words carry signal the regex fingerprints alone miss.")
-
-if message.strip():
-    st.divider()
-    st.subheader("Why")
-    chips = "".join(
-        f'<span class="chip on" style="background:{c}">{label}</span>' if name in fired
-        else f'<span class="chip">{label}</span>'
-        for name, (label, c) in FINGERPRINT_STYLE.items())
-    st.markdown(f'<div class="card"><div class="muted">Regex fingerprints in the raw message</div>{chips}'
-                f'<div class="msg">{highlight(message)}</div></div>', unsafe_allow_html=True)
-
-    toward_spam, toward_ham = top_contributions(model, X)
-    s, h = st.columns(2)
-    s.markdown("**Pushing toward spam**")
-    for value, name in toward_spam:
-        if value > 0:
-            s.progress(min(value / 5, 1.0), text=f"{name}  (+{value:.2f})")
-    h.markdown("**Pushing toward ham**")
-    for value, name in toward_ham:
-        if value < 0:
-            h.progress(min(-value / 5, 1.0), text=f"{name}  ({value:.2f})")
-
-    with st.expander("How the message was processed"):
-        cleaned = clean_text(message)
-        for title, value in [("1. Raw: regex + POS features are computed here", message),
-                             ("2. Cleaned: encoding, placeholders, slang, lowercase", cleaned),
-                             ("3. Tokens: stopwords removed, lemmatized", " ".join(process_tokens(cleaned)))]:
-            st.caption(title)
-            st.code(value, language=None, wrap_lines=True)
+        chips = "".join(
+            f'<span class="chip on" style="background:{c}">{label}</span>' if name in fired
+            else f'<span class="chip">{label}</span>'
+            for name, (label, c) in FINGERPRINT_STYLE.items())
+        toward_spam, toward_ham = top_contributions(model, X)
+        st.markdown(
+            f'<div class="card"><div class="label">Why · fingerprints</div>{chips}'
+            f'<div class="msg">{highlight(message)}</div></div>'
+            f'<div class="card"><div class="contrib">'
+            f'<div><div class="label">Toward spam</div>{contrib_rows(toward_spam, "#DC2626")}</div>'
+            f'<div><div class="label">Toward ham</div>{contrib_rows(toward_ham, "#16A34A")}</div>'
+            f"</div></div>",
+            unsafe_allow_html=True)
