@@ -2,3 +2,4 @@
 pandas==3.1.1
 numpy==2.4.6
 jupyter==1.1.1
+scikit-learn==1.9.1
