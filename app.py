@@ -28,8 +28,7 @@ FINGERPRINT_STYLE = {
     "n_urgent": ("Urgency", "#FEF3C7"),
     "n_exclaim": ("!", "#FCE7F3"),
 }
-OTHER_LABELS = {"n_chars": "Length", "n_words": "Word count", "digit_ratio": "Digit share",
-                "pos_vb": "Verb share", "pos_cd": "Number share", "pos_nnp": "Proper-noun share"}
+SPAM_RED, HAM_GREEN = "#DC2626", "#16A34A"
 
 EXAMPLES = {
     "Scams": {
@@ -52,7 +51,7 @@ EXAMPLES = {
 
 CSS = """
 <style>
-.block-container {max-width: 1180px; padding-top: 3.2rem; padding-bottom: 1rem;}
+.block-container {max-width: 1180px; padding-top: 3rem; padding-bottom: 1rem;}
 h1 {font-size: 1.7rem !important; font-weight: 700; letter-spacing: -0.02em; padding: 0 !important;}
 .sub {color: #6B7280; font-size: .9rem; margin: -.4rem 0 1.2rem;}
 .card {border: 1px solid #E5E7EB; border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: .8rem;}
@@ -61,7 +60,6 @@ h1 {font-size: 1.7rem !important; font-weight: 700; letter-spacing: -0.02em; pad
 .bar {height: 6px; background: #F3F4F6; border-radius: 99px; margin: .6rem 0 .7rem;}
 .bar > div {height: 100%; border-radius: 99px;}
 .models {font-size: .9rem; color: #374151;}
-.models b {font-weight: 600;}
 .msg {line-height: 1.9; font-size: .98rem; color: #111827;}
 .msg mark {color: #111827; border-radius: 4px; padding: 1px 4px;}
 .chip {display: inline-block; border-radius: 99px; padding: 1px 9px; margin: 0 4px 6px 0; font-size: .75rem;
@@ -93,15 +91,20 @@ def highlight(text: str) -> str:
     for start, end, name in spans:
         if start < pos:  # overlaps an earlier match (e.g. "WON" is CAPS and urgency): keep the first
             continue
+        colour = FINGERPRINT_STYLE[name][1]
         out.append(html.escape(text[pos:start]))
-        out.append(f'<mark style="background:{FINGERPRINT_STYLE[name][1]}">{html.escape(text[start:end])}</mark>')
+        out.append(f'<mark style="background:{colour}">{html.escape(text[start:end])}</mark>')
         pos = end
     out.append(html.escape(text[pos:]))
     return "".join(out)
 
 
+OTHER_LABELS = {"n_chars": "Length", "n_words": "Word count", "digit_ratio": "Digit share",
+                "pos_vb": "Verb share", "pos_cd": "Number share", "pos_nnp": "Proper-noun share"}
+
+
 def readable(name: str, X) -> str:
-    """'text__claim' -> '"claim"'; 'numeric__n_phones' -> 'Phone = 0' (value in this message)."""
+    """'text__claim' -> '"claim"'; 'numeric__n_phones' -> 'Phone number = 0' (value in this message)."""
     kind, feature = name.split("__", 1)
     if kind == "text":
         return f'"{feature}"'
@@ -153,14 +156,6 @@ with left:
         st.pills(group, list(examples), key=f"pick_{group}", on_change=pick_example, args=(group,))
     message = st.text_area("Message", key="message", height=130,
                            placeholder="Paste or type an SMS, then press Ctrl/⌘ + Enter…")
-    if message.strip():
-        with st.expander("How the message was processed"):
-            cleaned = clean_text(message)
-            for title, value in [("Raw: regex + POS features", message),
-                                 ("Cleaned: encoding, placeholders, slang, lowercase", cleaned),
-                                 ("Tokens: stopwords removed, lemmatized", " ".join(process_tokens(cleaned)))]:
-                st.caption(title)
-                st.code(value, language=None, wrap_lines=True)
 
 with right:
     if not message.strip():
@@ -172,29 +167,34 @@ with right:
         p_spam = float(model.predict_proba(X)[0, 1])
         fired = [name for name in FINGERPRINTS if PATTERNS[name].search(message)]
         is_spam, rule_spam = p_spam >= 0.5, len(fired) >= RULE_K
-        colour = "#DC2626" if is_spam else "#16A34A"
-        risk = "high" if p_spam >= 0.7 else "medium" if p_spam >= 0.3 else "low"
-        note = (" · <i>they disagree: the words carry signal the fingerprints miss</i>"
-                if is_spam != rule_spam else "")
+        colour = SPAM_RED if is_spam else HAM_GREEN
+        note = " · they disagree: the words catch what the patterns miss" if rule_spam != is_spam else ""
 
         st.markdown(
-            f'<div class="card"><div class="label">Result · {risk} risk</div>'
+            f'<div class="card"><div class="label">ML model verdict</div>'
             f'<div class="verdict" style="color:{colour}">{"Spam" if is_spam else "Not spam"} · {p_spam:.0%}</div>'
             f'<div class="bar"><div style="width:{p_spam * 100:.0f}%;background:{colour}"></div></div>'
-            f'<div class="models">Regex rule: <b>{"Spam" if rule_spam else "Ham"}</b> ({len(fired)}/7) · '
-            f'ML model: <b>{"Spam" if is_spam else "Ham"}</b> ({p_spam:.0%}){note}</div></div>',
-            unsafe_allow_html=True)
+            f'<div class="models">Regex rule: <b>{"Spam" if rule_spam else "Not spam"}</b> '
+            f'({len(fired)}/7 fingerprints){note}</div></div>', unsafe_allow_html=True)
 
         chips = "".join(
             f'<span class="chip on" style="background:{c}">{label}</span>' if name in fired
             else f'<span class="chip">{label}</span>'
             for name, (label, c) in FINGERPRINT_STYLE.items())
+        st.markdown(f'<div class="card"><div class="label">Fingerprints</div>{chips}'
+                    f'<div class="msg">{highlight(message)}</div></div>', unsafe_allow_html=True)
+
         toward_spam, toward_ham = top_contributions(model, X)
         st.markdown(
-            f'<div class="card"><div class="label">Why · fingerprints</div>{chips}'
-            f'<div class="msg">{highlight(message)}</div></div>'
-            f'<div class="card"><div class="contrib">'
-            f'<div><div class="label">Toward spam</div>{contrib_rows(toward_spam, "#DC2626")}</div>'
-            f'<div><div class="label">Toward ham</div>{contrib_rows(toward_ham, "#16A34A")}</div>'
-            f"</div></div>",
-            unsafe_allow_html=True)
+            '<div class="card"><div class="contrib">'
+            f'<div><div class="label">Toward spam</div>{contrib_rows(toward_spam, SPAM_RED)}</div>'
+            f'<div><div class="label">Toward not spam</div>{contrib_rows(toward_ham, HAM_GREEN)}</div>'
+            '</div></div>', unsafe_allow_html=True)
+
+        with st.expander("How the message was processed"):
+            cleaned = clean_text(message)
+            for title, value in [("Raw: regex + POS features", message),
+                                 ("Cleaned: encoding, placeholders, slang, lowercase", cleaned),
+                                 ("Tokens: stopwords removed, lemmatized", " ".join(process_tokens(cleaned)))]:
+                st.caption(title)
+                st.code(value, language=None, wrap_lines=True)
