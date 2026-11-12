@@ -1,0 +1,4 @@
+# Python 3.11. Direct dependencies only, pinned for reproducibility (NFR-1).
+pandas==3.1.1
+numpy==2.4.6
+jupyter==1.1.1
