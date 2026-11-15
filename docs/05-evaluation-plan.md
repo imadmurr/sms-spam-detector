@@ -56,4 +56,4 @@ Model 3 makes 2 false alarms and misses 10 spam messages out of 1,032.
 | Without lemmatization | 0.939 | −0.002 |
 | Without any cleaning (raw text into TF-IDF) | 0.945 | +0.004 |
 
-The regex fingerprints are the step that clearly helps. The text-processing steps change F1 by less than the fold-to-fold variation (±0.018), so they neither help nor hurt this classifier noticeably.
+The regex patterns are the step that clearly helps. The text-processing steps change F1 by less than the fold-to-fold variation (±0.018), so they neither help nor hurt this classifier noticeably.

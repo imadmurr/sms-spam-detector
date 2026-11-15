@@ -1,6 +1,6 @@
 # SMS Spam Detector
 
-Classify English SMS messages as **spam** or **ham** (legitimate) with classic NLP, and measure how much hand-written regex "fingerprints" add on top of a bag-of-words model.
+Classify English SMS messages as **spam** or **ham** (legitimate) with classic NLP, and measure how much hand-written regex patterns add on top of a bag-of-words model.
 
 **Live demo:** https://sms-spam-detector-2.streamlit.app/
 
@@ -13,12 +13,12 @@ Test set of 1,032 messages, never used during training or tuning:
 | Model | Input | Precision | Recall | Spam F1 |
 | --- | --- | --- | --- | --- |
 | Baseline (always ham) | — | 0.000 | 0.000 | 0.000 |
-| 0: Regex rules | 7 regex fingerprints only | 0.990 | 0.742 | 0.848 |
+| 0: Regex rules | 7 regex patterns only | 0.990 | 0.742 | 0.848 |
 | 1: Naive Bayes | Bag-of-words | 0.929 | 0.922 | 0.925 |
 | 2: Linear SVM | TF-IDF | 0.945 | 0.938 | 0.941 |
 | **3: Logistic Regression** | **TF-IDF + regex + POS features** | **0.983** | **0.922** | **0.952** |
 
-- **Regex fingerprints alone** catch three quarters of the spam with almost no false alarms.
+- **Regex patterns alone** catch three quarters of the spam with almost no false alarms.
 - **Combined with words**, they give the best model. Removing them from Model 3 lowers cross-validated F1 by 0.016.
 - **Cleaning, stopword removal and lemmatization** change F1 by less than ±0.004, within the noise between folds.
 
@@ -27,13 +27,13 @@ Full tables, the ablation and the targets: [docs/05-evaluation-plan.md](docs/05-
 ## How it works
 
 ```
-raw SMS ──┬──► regex fingerprints + POS ratios        (computed on the raw text)
+raw SMS ──┬──► regex patterns + POS ratios            (computed on the raw text)
           └──► clean → tokenize → stopwords → lemmatize → TF-IDF
                                     │
                      both feed Logistic Regression → spam probability
 ```
 
-1. **Regex fingerprints** are counted on the raw text: links, phone numbers, 5-digit short codes, money amounts, CAPS words, urgency words and exclamation marks. They come first, because cleaning would delete them.
+1. **Regex patterns** are counted on the raw text: links, phone numbers, 5-digit short codes, money amounts, CAPS words, urgency words and exclamation marks. They come first, because cleaning would delete them.
 2. **Cleaning:**
    - fix encoding and HTML entities;
    - replace URLs, money, phone numbers and other numbers with placeholder tokens;

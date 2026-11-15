@@ -18,7 +18,7 @@ Coding runs Thursday to Saturday; deliverables close on Sunday 15 November.
 
 1. Problem: SMS scams and why regex suits them
 2. Data and cleaning: dataset facts plus one message before and after cleaning
-3. Regex fingerprints: feature table and a spam-vs-ham bar chart
+3. Regex patterns: feature table and a spam-vs-ham bar chart
 4. Results: model comparison table and the best confusion matrix
 5. Insights: word clouds, live Streamlit demo, limitations and next steps
 

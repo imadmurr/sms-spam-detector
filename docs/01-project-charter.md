@@ -6,7 +6,7 @@ We build an SMS spam and phishing detector that shows how far regex-based text f
 
 ## Problem
 
-SMS scams (fake prizes, parcel fees, bank alerts) reach phones daily. Spammers leave fingerprints in the text: links, short codes, money amounts, CAPS and urgency words. Regex can catch these cheaply.
+SMS scams (fake prizes, parcel fees, bank alerts) reach phones daily. Spammers leave telltale patterns in the text: links, short codes, money amounts, CAPS and urgency words. Regex can catch these cheaply.
 
 ## Goal
 

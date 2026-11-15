@@ -24,7 +24,7 @@ We use the UCI SMS Spam Collection: English SMS messages, already labelled `ham`
 | `clean_text` | str | Output of the cleaning step |
 | `tokens` | list | Tokenized, stopwords removed, lemmatized |
 | `doc` | str | `tokens` joined back into one string, the input to the vectorizers |
-| regex feature columns | int / float | 7 fingerprint counts plus `n_chars`, `n_words`, `digit_ratio` |
+| regex feature columns | int / float | 7 pattern counts plus `n_chars`, `n_words`, `digit_ratio` |
 | POS feature columns | float | `pos_vb`, `pos_cd`, `pos_nnp` ratios |
 
 ## Known noise

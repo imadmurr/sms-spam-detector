@@ -15,15 +15,15 @@ for package in ["punkt_tab", "stopwords", "wordnet", "averaged_perceptron_tagger
 
 import joblib  # noqa: E402
 
-from features import FINGERPRINTS, PATTERNS, build_input, clean_text, process_tokens  # noqa: E402
+from features import PATTERN_NAMES, PATTERNS, build_input, clean_text, process_tokens  # noqa: E402
 
 MODEL_PATH = "models/model3.joblib"
 CSS_PATH = Path(__file__).parent / "assets" / "style.css"
-RULE_K = 3  # Model 0: spam if at least 3 distinct fingerprints fire (k tuned in the notebook)
+RULE_K = 3  # Model 0: spam if at least 3 distinct patterns fire (k tuned in the notebook)
 SPAM, HAM = "#E11D48", "#059669"
 
-# Fingerprint -> (label, highlight colour, dot colour)
-FINGERPRINT_STYLE = {
+# Pattern -> (label, highlight colour, dot colour)
+PATTERN_STYLE = {
     "n_urls": ("Link", "#DBEAFE", "#3B82F6"),
     "n_phones": ("Phone number", "#FFE4E6", "#F43F5E"),
     "n_shortcodes": ("Short code", "#FFEDD5", "#F97316"),
@@ -62,15 +62,15 @@ def load_model():
 
 
 def highlight(text: str) -> str:
-    """Return the message as HTML with each fingerprint match marked in its colour.
+    """Return the message as HTML with each pattern match marked in its colour.
     Text is HTML-escaped first, so user input can never inject markup."""
-    spans = sorted((m.start(), m.end(), name) for name in FINGERPRINTS for m in PATTERNS[name].finditer(text))
+    spans = sorted((m.start(), m.end(), name) for name in PATTERN_NAMES for m in PATTERNS[name].finditer(text))
     out, pos = [], 0
     for start, end, name in spans:
         if start < pos:  # overlaps an earlier match (e.g. "WON" is CAPS and urgency): keep the first
             continue
         out.append(html.escape(text[pos:start]))
-        out.append(f'<mark style="background:{FINGERPRINT_STYLE[name][1]}">{html.escape(text[start:end])}</mark>')
+        out.append(f'<mark style="background:{PATTERN_STYLE[name][1]}">{html.escape(text[start:end])}</mark>')
         pos = end
     out.append(html.escape(text[pos:]))
     return "".join(out)
@@ -81,7 +81,7 @@ def readable(name: str, X) -> str:
     kind, feature = name.split("__", 1)
     if kind == "text":
         return f'"{feature}"'
-    label = FINGERPRINT_STYLE[feature][0] if feature in FINGERPRINT_STYLE else OTHER_LABELS[feature]
+    label = PATTERN_STYLE[feature][0] if feature in PATTERN_STYLE else OTHER_LABELS[feature]
     value = X[feature].iloc[0]
     return f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}"
 
@@ -143,7 +143,7 @@ st.markdown(
     '</div></div><div class="stats"><div class="stat">F1 <b>0.952</b></div><div class="stat">Precision <b>98.3%</b></div>'
     '<div class="stat">Recall <b>92.2%</b></div><div class="stat">5,158 training SMS</div></div></div>'
     '<div class="hero"><h1>Is this text message <span class="accent">a scam?</span></h1>'
-    "<p>Regex fingerprints, NLP features and TF-IDF words feed a Logistic Regression model. "
+    "<p>Regex patterns, NLP features and TF-IDF words feed a Logistic Regression model. "
     "Paste a message or try an example to see the verdict and exactly what drove it.</p></div>",
     unsafe_allow_html=True)
 
@@ -169,7 +169,7 @@ with right, st.container(border=True):
         model = load_model()
         X = build_input(message)
         p_spam = float(model.predict_proba(X)[0, 1])
-        fired = [name for name in FINGERPRINTS if PATTERNS[name].search(message)]
+        fired = [name for name in PATTERN_NAMES if PATTERNS[name].search(message)]
         is_spam, rule_spam = p_spam >= 0.5, len(fired) >= RULE_K
         colour = SPAM if is_spam else HAM
         risk = "High" if p_spam >= 0.7 else "Medium" if p_spam >= 0.3 else "Low"
@@ -185,7 +185,7 @@ with right, st.container(border=True):
             "</div></div>"
             f'<div class="compare"><div class="tile"><div class="t">Regex rule · Model 0</div>'
             f'<div class="v" style="color:{SPAM if rule_spam else HAM}">{"Spam" if rule_spam else "Not spam"}</div>'
-            f'<div class="d">{len(fired)} of 7 fingerprints fired</div></div>'
+            f'<div class="d">{len(fired)} of 7 patterns fired</div></div>'
             f'<div class="tile"><div class="t">ML model · Model 3</div>'
             f'<div class="v" style="color:{colour}">{"Spam" if is_spam else "Not spam"}</div>'
             f'<div class="d">{p_spam:.1%} spam probability</div></div></div>{note}',
@@ -197,8 +197,8 @@ if message:
         chips = "".join(
             f'<span class="chip on"><i style="background:{dot}"></i>{label}</span>' if name in fired
             else f'<span class="chip"><i></i>{label}</span>'
-            for name, (label, _, dot) in FINGERPRINT_STYLE.items())
-        st.markdown(f'<div class="card-title">Fingerprints in the message</div>'
+            for name, (label, _, dot) in PATTERN_STYLE.items())
+        st.markdown(f'<div class="card-title">Regex patterns in the message</div>'
                     f'<div class="bubble">{highlight(message)}</div><div class="chips">{chips}</div>',
                     unsafe_allow_html=True)
 
@@ -212,7 +212,7 @@ if message:
 
     with st.expander("How the message was processed (NLP pipeline)"):
         cleaned = clean_text(message)
-        steps = [("Raw text", "Regex fingerprints and POS features are computed here", message),
+        steps = [("Raw text", "Regex patterns and POS features are computed here", message),
                  ("Cleaned", "Encoding fixed, URLs/money/phones replaced, slang mapped, lowercased", cleaned),
                  ("Tokens", "Tokenized, stopwords removed, lemmatized → TF-IDF", " ".join(process_tokens(cleaned)))]
         st.markdown("".join(

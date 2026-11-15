@@ -2,10 +2,10 @@
 
 *How the pipeline is built · based on an ML design doc*
 
-Raw text splits into two branches: regex and POS features are extracted from the untouched text, while a cleaned copy feeds the bag-of-words. The key rule: these features come first, because cleaning deletes the very fingerprints they detect.
+Raw text splits into two branches: regex and POS features are extracted from the untouched text, while a cleaned copy feeds the bag-of-words. The key rule: these features come first, because cleaning deletes the very things they detect.
 
 ```
-raw SMS ──┬──► Branch A: regex fingerprints + POS ratios   (raw text)
+raw SMS ──┬──► Branch A: regex patterns + POS ratios       (raw text)
           │
           └──► Branch B: clean → tokenize → stopwords → lemmatize → TF-IDF
 
@@ -61,7 +61,7 @@ Order matters: each rule only sees what earlier rules left behind. Rules that re
 
 | Model | Input | Classifier | Shows |
 | --- | --- | --- | --- |
-| 0 | Regex fingerprints | Rule: spam if ≥ k distinct fingerprints fire (k = 3, tuned on train) | How far pure rules go, no ML |
+| 0 | Regex patterns | Rule: spam if ≥ k distinct patterns fire (k = 3, tuned on train) | How far pure rules go, no ML |
 | 1 | Bag-of-words counts | Multinomial Naive Bayes (also reported with TF-IDF as 1b) | The classic text baseline |
 | 2 | TF-IDF words | Linear SVM | Usually the strongest classic text model |
 | 3 | TF-IDF + scaled regex + POS features | Logistic Regression, `class_weight='balanced'`, `C=100` (tuned on train) | Final model: NLP features on top of words; probabilities and readable weights for the app |
@@ -74,7 +74,7 @@ Not used: GaussianNB (assumes normally distributed features, poor fit for word c
 | --- | --- |
 | Data | pandas, numpy |
 | Regex and cleaning | `re`, `html` |
-| Text processing | NLTK (`word_tokenize`, `stopwords`, `WordNetLemmatizer`, `PorterStemmer`, `LancasterStemmer`, `pos_tag`, `ngrams`) |
+| Text processing | NLTK (`word_tokenize`, `stopwords`, `WordNetLemmatizer`, `PorterStemmer`, `pos_tag`, `ngrams`) |
 | Features and models | scikit-learn, joblib |
 | Plots | matplotlib, wordcloud |
 | Demo app (UI only) | Streamlit |

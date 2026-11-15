@@ -1,6 +1,6 @@
-"""Regex fingerprint features and text cleaning, shared by the notebook and the Streamlit app.
+"""Regex pattern features and text cleaning, shared by the notebook and the Streamlit app.
 
-regex_features() always runs on the RAW message: cleaning deletes the very fingerprints it detects.
+regex_features() always runs on the RAW message: cleaning deletes the very things its patterns detect.
 """
 import html
 import re
@@ -24,12 +24,12 @@ FEATURES = {
 # Compile once instead of on every call.
 PATTERNS = {name: re.compile(pattern) for name, pattern in FEATURES.items()}
 
-FINGERPRINTS = list(FEATURES)  # the 7 regex fingerprints (used by Model 0 and the app)
-FEATURE_NAMES = FINGERPRINTS + ["n_chars", "n_words", "digit_ratio"]
+PATTERN_NAMES = list(FEATURES)  # names of the 7 regex patterns (used by Model 0 and the app)
+FEATURE_NAMES = PATTERN_NAMES + ["n_chars", "n_words", "digit_ratio"]
 
 
 def regex_features(text: str) -> dict:
-    """Count each fingerprint in a raw SMS, plus simple length and digit statistics."""
+    """Count each pattern's matches in a raw SMS, plus simple length and digit statistics."""
     feats = {name: len(pattern.findall(text)) for name, pattern in PATTERNS.items()}
     feats["n_chars"] = len(text)
     feats["n_words"] = len(text.split())
@@ -116,7 +116,7 @@ def pos_features(text: str) -> dict:
     }
 
 
-# --- Model input (used by the notebook check and the Streamlit app) ---
+# --- Model input (used by the Streamlit app) ---
 
 
 def build_input(text: str) -> pd.DataFrame:

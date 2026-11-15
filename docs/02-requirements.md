@@ -14,7 +14,7 @@
 | FR-4 | Normalize SMS slang with a regex/dictionary map (u → you, txt → text, 2 → to, fr33 → free) | Normalization | Should | Done |
 | FR-5 | Tokenize with NLTK `word_tokenize` | Tokenization | Must | Done |
 | FR-6 | Remove NLTK stopwords, keeping negations (not, no, nor, never) | Stopwords | Must | Done |
-| FR-7 | Compare Porter, Lancaster and WordNet lemmatizer (with and without POS); pick one for the pipeline | Stemming / lemmatization | Must | Done |
+| FR-7 | Compare the Porter stemmer and the WordNet lemmatizer (with and without POS); pick one for the pipeline | Stemming / lemmatization | Must | Done |
 | FR-8 | POS-tag messages; derive 3 POS ratio features (verbs VB, numbers CD, proper nouns NNP) | POS tagging | Should | Done |
 | FR-9 | Show top unigrams and bigrams per class | N-grams | Must | Done |
 | FR-10 | Word frequencies and word clouds per class, before and after cleaning | Text exploration | Must | Done |
@@ -22,7 +22,7 @@
 | FR-12 | Train Model 0 (regex rules), Multinomial NB, Linear SVM, and Logistic Regression on TF-IDF + regex/POS features | Classification | Must | Done |
 | FR-13 | Ablation: retrain the final model with each NLP step removed, one at a time | Evaluation | Must | Done |
 | FR-14 | Report precision, recall, F1 and a confusion matrix per model | Evaluation | Must | Done |
-| FR-15 | `predict(text)` served through the Streamlit app, showing spam probability and which fingerprints fired | Demo | Should | Done |
+| FR-15 | `predict(text)` served through the Streamlit app, showing spam probability and which patterns fired | Demo | Should | Done |
 | FR-16 | Test on a few hand-written local scam-style messages | Demo | Could | Done (app examples) |
 | FR-17 | LDA topics of spam messages (prizes, loans, ringtones…) for an insight slide | Topic modelling | Could | Dropped |
 | FR-18 | Levenshtein feature: words within 1 edit of a spam lexicon (catches "fr3e") | Text similarity | Could | Dropped |
