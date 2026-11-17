@@ -31,6 +31,9 @@ FEATURE_NAMES = PATTERN_NAMES + ["n_chars", "n_words", "digit_ratio"]
 def regex_features(text: str) -> dict:
     """Count each pattern's matches in a raw SMS, plus simple length and digit statistics."""
     feats = {name: len(pattern.findall(text)) for name, pattern in PATTERNS.items()}
+    # Count short codes on phone-blanked text so "07700 900123" is not also a short code.
+    phone_free = PATTERNS["n_phones"].sub(" ", text)
+    feats["n_shortcodes"] = len(PATTERNS["n_shortcodes"].findall(phone_free))
     feats["n_chars"] = len(text)
     feats["n_words"] = len(text.split())
     feats["digit_ratio"] = sum(ch.isdigit() for ch in text) / max(len(text), 1)
