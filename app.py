@@ -140,8 +140,8 @@ st.session_state.setdefault("analysed", "")
 st.markdown(
     '<div class="topbar"><div class="brand"><div class="logo">🛡️</div><div>'
     '<div class="brand-name">SMS Spam Detector</div><div class="brand-tag">Spam &amp; phishing detection · NLP capstone</div>'
-    '</div></div><div class="stats"><div class="stat">F1 <b>0.952</b></div><div class="stat">Precision <b>98.3%</b></div>'
-    '<div class="stat">Recall <b>92.2%</b></div><div class="stat">5,158 training SMS</div></div></div>'
+    '</div></div><div class="stats"><div class="stat">F1 <b>0.956</b></div><div class="stat">Precision <b>98.3%</b></div>'
+    '<div class="stat">Recall <b>93.0%</b></div><div class="stat">4,426 training SMS</div></div></div>'
     '<div class="hero"><h1>Is this text message <span class="accent">a scam?</span></h1>'
     "<p>Regex patterns, NLP features and TF-IDF words feed a Logistic Regression model. "
     "Paste a message or try an example to see the verdict and exactly what drove it.</p></div>",

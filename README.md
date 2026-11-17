@@ -14,13 +14,13 @@ Test set of 1,032 messages, never used during training or tuning:
 | --- | --- | --- | --- | --- |
 | Baseline (always ham) | — | 0.000 | 0.000 | 0.000 |
 | 0: Regex rules | 7 regex patterns only | 0.990 | 0.742 | 0.848 |
-| 1: Naive Bayes | Bag-of-words | 0.929 | 0.922 | 0.925 |
-| 2: Linear SVM | TF-IDF | 0.945 | 0.938 | 0.941 |
-| **3: Logistic Regression** | **TF-IDF + regex + POS features** | **0.983** | **0.922** | **0.952** |
+| 1: Naive Bayes | Bag-of-words | 0.937 | 0.922 | 0.929 |
+| 2: Linear SVM | TF-IDF | 0.953 | 0.945 | 0.949 |
+| **3: Logistic Regression** | **TF-IDF + regex + POS features** | **0.983** | **0.930** | **0.956** |
 
 - **Regex patterns alone** catch three quarters of the spam with almost no false alarms.
-- **Combined with words**, they give the best model. Removing them from Model 3 lowers cross-validated F1 by 0.016.
-- **Cleaning, stopword removal and lemmatization** change F1 by less than ±0.004, within the noise between folds.
+- **Combined with words**, they give the best model. Removing them from Model 3 lowers cross-validated F1 by 0.011.
+- **Cleaning, stopword removal and lemmatization** change F1 by less than ±0.011, within the noise between folds.
 
 Full tables, the ablation and the targets: [docs/05-evaluation-plan.md](docs/05-evaluation-plan.md).
 
@@ -97,6 +97,7 @@ The demo runs on Streamlit Community Cloud from the `main` branch (main file `ap
 - English only, trained on UK messages from around 2011.
 - Modern scams with no links, numbers or money can slip through, e.g. "Hi mum, this is my new number…" and job offers. The app shows both as examples.
 - Classic models only; transformers are out of scope.
+- The original dataset contained no ham messages with phone numbers, causing the model to treat any phone number as a near-certain spam signal. To correct this, 300 synthetic ham messages (real ham text with an appended random UK mobile number) were added to the training set. This reduced false alarms on messages like "My new number is 07700900123, save it" while keeping detection of spam that uses premium-rate numbers high.
 
 ## Data and credits
 
